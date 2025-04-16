@@ -1,0 +1,133 @@
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatCard } from "@/components/ui/StatCard";
+import { AlertCircle, Shield, Clock, Globe, Calendar, MapPin, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface Alert {
+  id: number;
+  region: string;
+  level: "High" | "Medium" | "Low";
+  description: string;
+  time: string;
+}
+
+const alerts: Alert[] = [
+  { id: 1, region: "Bangkok, Thailand", level: "High", description: "Unusual transportation of 5 children detected", time: "2h ago" },
+  { id: 2, region: "Lagos, Nigeria", level: "Medium", description: "Multiple identity verification failures", time: "6h ago" },
+  { id: 3, region: "Mumbai, India", level: "Low", description: "Anomalous school absence patterns detected", time: "12h ago" },
+];
+
+export function OverviewTab() {
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard 
+          title="Active Alerts" 
+          value="24" 
+          icon={AlertCircle}
+          description="Across monitored regions"
+          trend={{ direction: "up", value: "3 new today" }}
+        />
+        <StatCard 
+          title="Protected Children" 
+          value="256,789" 
+          icon={Shield}
+          description="Registered in BCIL system"
+          trend={{ direction: "up", value: "1,231 this week" }}
+        />
+        <StatCard 
+          title="Response Time" 
+          value="4.2 min" 
+          icon={Clock}
+          description="Average alert response"
+          trend={{ direction: "down", value: "28% improvement" }}
+        />
+        <StatCard 
+          title="Active Regions" 
+          value="42" 
+          icon={Globe}
+          description="With monitoring enabled"
+          trend={{ direction: "up", value: "2 new this month" }}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>System-wide alerts and notifications</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {alerts.map((alert) => (
+                <div key={alert.id} className="flex items-start gap-4 p-4 rounded-lg border">
+                  <div className={`p-2 rounded-full ${
+                    alert.level === "High" 
+                      ? "bg-guardian-accent/15 text-guardian-accent" 
+                      : alert.level === "Medium"
+                      ? "bg-guardian-warning/15 text-guardian-warning"
+                      : "bg-guardian-primary/15 text-guardian-primary"
+                  }`}>
+                    <AlertCircle className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-medium">{alert.region}</h4>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        alert.level === "High" 
+                          ? "bg-guardian-accent/15 text-guardian-accent" 
+                          : alert.level === "Medium"
+                          ? "bg-guardian-warning/15 text-guardian-warning"
+                          : "bg-guardian-primary/15 text-guardian-primary"
+                      }`}>
+                        {alert.level} Risk
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">{alert.description}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-muted-foreground">{alert.time}</span>
+                      <Button variant="outline" size="sm">View Details</Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Events</CardTitle>
+            <CardDescription>Scheduled operations and maintenance</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 p-3 rounded-lg border">
+                <Calendar className="h-5 w-5 text-guardian-primary mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-sm">System Maintenance</h4>
+                  <p className="text-xs text-muted-foreground">April 18, 2025 - 02:00 UTC</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg border">
+                <MapPin className="h-5 w-5 text-guardian-primary mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-sm">Field Operation</h4>
+                  <p className="text-xs text-muted-foreground">Nairobi Region - April 20, 2025</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg border">
+                <Users className="h-5 w-5 text-guardian-primary mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-sm">Partner Training</h4>
+                  <p className="text-xs text-muted-foreground">Virtual - April 22, 2025</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
