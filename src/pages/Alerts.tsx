@@ -17,87 +17,75 @@ import {
   MapPin, 
   Clock, 
   ChevronRight, 
-  ShieldAlert
+  ShieldAlert,
+  Plus,
+  Loader2
 } from "lucide-react";
-
-interface Alert {
-  id: number;
-  title: string;
-  location: string;
-  description: string;
-  severity: "critical" | "high" | "medium" | "low";
-  status: "active" | "investigating" | "resolved";
-  time: string;
-  distance?: string;
-}
-
-const alertData: Alert[] = [
-  {
-    id: 1,
-    title: "Child ID Mismatch",
-    location: "Bangkok International Airport, Thailand",
-    description: "Biometric verification failure for 3 children traveling with single adult. Local authorities alerted.",
-    severity: "critical",
-    status: "active",
-    time: "10 minutes ago",
-    distance: "4,562 km"
-  },
-  {
-    id: 2,
-    title: "Suspicious Border Activity",
-    location: "Mombasa Port, Kenya",
-    description: "Multiple children detected in non-passenger vehicle attempting to board cargo vessel.",
-    severity: "high",
-    status: "investigating",
-    time: "45 minutes ago",
-    distance: "7,820 km"
-  },
-  {
-    id: 3,
-    title: "Pattern Recognition Alert",
-    location: "Manila, Philippines",
-    description: "AI system detected unusual movement pattern of children between school and suspected trafficking location.",
-    severity: "medium",
-    status: "investigating",
-    time: "2 hours ago",
-    distance: "3,241 km"
-  },
-  {
-    id: 4,
-    title: "Digital Signal Detection",
-    location: "Dark Web Forum",
-    description: "NLP crawler detected coded conversation regarding child transportation to Europe.",
-    severity: "high",
-    status: "active",
-    time: "3 hours ago"
-  },
-  {
-    id: 5,
-    title: "Community Report",
-    location: "Mumbai Suburban District, India",
-    description: "Multiple community reports of unknown individuals photographing children outside school.",
-    severity: "medium",
-    status: "active",
-    time: "5 hours ago",
-    distance: "5,738 km"
-  },
-  {
-    id: 6,
-    title: "Educational Anomaly",
-    location: "Lagos, Nigeria",
-    description: "Cluster of 15+ students marked missing from school attendance over 3-day period.",
-    severity: "low",
-    status: "resolved",
-    time: "1 day ago",
-    distance: "8,912 km"
-  }
-];
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useAlerts, Alert } from "@/hooks/useAlerts";
+import { AlertsTable } from "@/components/alerts/AlertsTable";
+import { AlertForm } from "@/components/alerts/AlertForm";
 
 const Alerts = () => {
   const [activeTab, setActiveTab] = useState("all");
-  const [alerts, setAlerts] = useState(alertData);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [sortBy, setSortBy] = useState("newest");
 
-  const getSeverityColor = (severity: Alert["severity"]) => {
+  const {
+    alerts,
+    loading,
+    error,
+    addAlert,
+    editAlert,
+    removeAlert
+  } = useAlerts();
+
+  const handleCreateSubmit = async (data: Partial<Alert>) => {
+    try {
+      await addAlert({
+        ...data,
+        user_id: "placeholder-user-id", // Replace with actual user ID when auth is implemented
+      } as any);
+      setIsCreateDialogOpen(false);
+    } catch (error) {
+      console.error("Error creating alert:", error);
+    }
+  };
+
+  const handleEditSubmit = async (data: Partial<Alert>) => {
+    if (!selectedAlert) return;
+    try {
+      await editAlert(selectedAlert.id, data);
+      setIsEditDialogOpen(false);
+      setSelectedAlert(null);
+    } catch (error) {
+      console.error("Error updating alert:", error);
+    }
+  };
+
+  const handleDelete = async (alert: Alert) => {
+    try {
+      await removeAlert(alert.id);
+    } catch (error) {
+      console.error("Error deleting alert:", error);
+    }
+  };
+
+  const handleEditClick = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleViewDetailsClick = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setIsViewDialogOpen(true);
+  };
+
+  const getSeverityColor = (severity: string) => {
     switch(severity) {
       case "critical":
         return "bg-guardian-accent text-white";
@@ -112,7 +100,7 @@ const Alerts = () => {
     }
   };
 
-  const getStatusColor = (status: Alert["status"]) => {
+  const getStatusColor = (status: string) => {
     switch(status) {
       case "active":
         return "bg-guardian-accent/15 text-guardian-accent border-guardian-accent/30";
@@ -125,15 +113,46 @@ const Alerts = () => {
     }
   };
 
-  const filteredAlerts = () => {
-    if (activeTab === "all") return alerts;
-    return alerts.filter(alert => {
-      if (activeTab === "critical") return alert.severity === "critical";
-      if (activeTab === "active") return alert.status === "active";
-      if (activeTab === "resolved") return alert.status === "resolved";
-      return true;
-    });
-  };
+  // Filter alerts based on active tab and search query
+  const filteredAlerts = alerts.filter(alert => {
+    // Tab filtering
+    if (activeTab === "critical" && alert.risk_level !== "critical") return false;
+    if (activeTab === "active" && alert.status !== "active") return false;
+    if (activeTab === "resolved" && alert.status !== "resolved") return false;
+    
+    // Search filtering
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        alert.title.toLowerCase().includes(query) ||
+        alert.description.toLowerCase().includes(query) ||
+        (typeof alert.location === 'string' && alert.location.toLowerCase().includes(query))
+      );
+    }
+    
+    return true;
+  });
+
+  // Sort alerts
+  const sortedAlerts = [...filteredAlerts].sort((a, b) => {
+    if (sortBy === "newest") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    } else if (sortBy === "priority") {
+      const riskOrder = { "critical": 0, "high": 1, "medium": 2, "low": 3 };
+      return riskOrder[a.risk_level as keyof typeof riskOrder] - riskOrder[b.risk_level as keyof typeof riskOrder];
+    } else if (sortBy === "location") {
+      // Sort by location string or coordinates
+      const locA = typeof a.location === 'string' ? a.location : `${a.location.lat},${a.location.lng}`;
+      const locB = typeof b.location === 'string' ? b.location : `${b.location.lat},${b.location.lng}`;
+      return locA.localeCompare(locB);
+    }
+    return 0;
+  });
+
+  // Alert stat counts
+  const criticalCount = alerts.filter(a => a.risk_level === "critical").length;
+  const highPriorityCount = alerts.filter(a => a.risk_level === "high").length;
+  const activeCount = alerts.filter(a => a.status === "active").length;
 
   return (
     <Layout>
@@ -143,10 +162,15 @@ const Alerts = () => {
             <h1 className="text-3xl font-bold tracking-tight">Alert Center</h1>
             <p className="text-muted-foreground">Monitor and respond to potential trafficking situations</p>
           </div>
-          <Button className="bg-guardian-primary hover:bg-guardian-dark">
-            <Bell className="mr-2 h-4 w-4" />
-            Configure Alerts
-          </Button>
+          <div className="flex gap-2">
+            <Button className="bg-guardian-primary hover:bg-guardian-dark" onClick={() => setIsCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> New Alert
+            </Button>
+            <Button className="bg-guardian-primary hover:bg-guardian-dark">
+              <Bell className="mr-2 h-4 w-4" />
+              Configure Alerts
+            </Button>
+          </div>
         </div>
 
         <AlertBanner
@@ -165,7 +189,7 @@ const Alerts = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-guardian-accent">1</div>
+              <div className="text-2xl font-bold text-guardian-accent">{criticalCount}</div>
             </CardContent>
           </Card>
           
@@ -177,7 +201,7 @@ const Alerts = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-guardian-warning">2</div>
+              <div className="text-2xl font-bold text-guardian-warning">{highPriorityCount}</div>
             </CardContent>
           </Card>
           
@@ -189,7 +213,7 @@ const Alerts = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4</div>
+              <div className="text-2xl font-bold">{activeCount}</div>
             </CardContent>
           </Card>
           
@@ -224,12 +248,14 @@ const Alerts = () => {
                   type="search"
                   placeholder="Search alerts..."
                   className="pl-8 w-full md:w-[200px] lg:w-[300px]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button variant="outline" size="icon">
                 <Filter className="h-4 w-4" />
               </Button>
-              <Select defaultValue="newest">
+              <Select defaultValue="newest" value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
@@ -243,55 +269,142 @@ const Alerts = () => {
           </div>
 
           <div className="space-y-4">
-            {filteredAlerts().map((alert) => (
-              <Card key={alert.id} className="overflow-hidden">
-                <div className={`h-1 ${getSeverityColor(alert.severity)}`} />
-                <CardContent className="p-4 md:p-6">
-                  <div className="flex flex-col md:flex-row gap-4 justify-between">
-                    <div className="space-y-3 flex-1">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold text-lg">{alert.title}</h3>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5" />
-                            <span>{alert.location}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant="outline" className={getStatusColor(alert.status)}>
-                            {alert.status.charAt(0).toUpperCase() + alert.status.slice(1)}
-                          </Badge>
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground">{alert.description}</p>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                        <div className="flex items-center gap-1 text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" />
-                          <span>{alert.time}</span>
-                        </div>
-                        {alert.distance && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5" />
-                            <span>{alert.distance}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex md:flex-col items-center gap-3">
-                      <Button variant="outline" size="sm" className="w-full">
-                        Details
-                      </Button>
-                      <Button className="w-full bg-guardian-primary hover:bg-guardian-dark">
-                        Respond <ChevronRight className="ml-1 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {loading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-guardian-primary" />
+              </div>
+            ) : sortedAlerts.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 flex flex-col items-center justify-center text-muted-foreground">
+                  <AlertTriangle className="h-12 w-12 mb-4" />
+                  <h3 className="text-xl font-medium mb-2">No alerts found</h3>
+                  <p className="max-w-md text-center">
+                    {searchQuery ? 
+                      "No alerts match your search criteria. Try adjusting your filters or search terms." : 
+                      "There are no alerts in this category. Create a new alert to get started."}
+                  </p>
+                  <Button 
+                    className="mt-4 bg-guardian-primary hover:bg-guardian-dark"
+                    onClick={() => setIsCreateDialogOpen(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Create New Alert
+                  </Button>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              <AlertsTable 
+                alerts={sortedAlerts}
+                onEdit={handleEditClick}
+                onDelete={handleDelete}
+                onViewDetails={handleViewDetailsClick}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {/* Create Alert Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Alert</DialogTitle>
+            <DialogDescription>
+              Create a new alert to notify the team of potential trafficking situations.
+            </DialogDescription>
+          </DialogHeader>
+          <AlertForm
+            onSubmit={handleCreateSubmit}
+            onCancel={() => setIsCreateDialogOpen(false)}
+            isSubmitting={loading}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Alert Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Alert</DialogTitle>
+            <DialogDescription>
+              Update the details of this alert.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedAlert && (
+            <AlertForm
+              alert={selectedAlert}
+              onSubmit={handleEditSubmit}
+              onCancel={() => setIsEditDialogOpen(false)}
+              isSubmitting={loading}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* View Alert Details Dialog */}
+      {selectedAlert && (
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{selectedAlert.title}</DialogTitle>
+              <DialogDescription>
+                Alert details and information
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="flex justify-between">
+                <div>
+                  <Badge className={getSeverityColor(selectedAlert.risk_level)}>
+                    {selectedAlert.risk_level.charAt(0).toUpperCase() + selectedAlert.risk_level.slice(1)} Risk
+                  </Badge>
+                </div>
+                <div>
+                  <Badge variant="outline" className={getStatusColor(selectedAlert.status)}>
+                    {selectedAlert.status.charAt(0).toUpperCase() + selectedAlert.status.slice(1)}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-medium mb-1">Description</h3>
+                <p className="text-sm text-muted-foreground">{selectedAlert.description}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Location</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {typeof selectedAlert.location === 'string' 
+                      ? selectedAlert.location 
+                      : `${selectedAlert.location.lat.toFixed(4)}, ${selectedAlert.location.lng.toFixed(4)}`}
+                  </p>
+                </div>
+                
+                <div>
+                  <h3 className="text-sm font-medium mb-1">Created</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {new Date(selectedAlert.created_at).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setIsViewDialogOpen(false);
+                    handleEditClick(selectedAlert);
+                  }}
+                >
+                  <Edit className="h-4 w-4 mr-2" /> Edit
+                </Button>
+                <Button className="bg-guardian-primary hover:bg-guardian-dark">
+                  <Bell className="h-4 w-4 mr-2" /> Respond
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </Layout>
   );
 };

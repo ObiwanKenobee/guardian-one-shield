@@ -4,15 +4,51 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, Plus, Edit, Trash2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useRiskZones, RiskZone } from "@/hooks/useRiskZones";
+
+type Hotspot = {
+  id: string;
+  name: string;
+  coordinates: [number, number];
+  description: string;
+  level: string;
+};
 
 export function MapTab() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedZone, setSelectedZone] = useState<RiskZone | null>(null);
+  const [formData, setFormData] = useState({
+    location: '',
+    description: '',
+    risk_level: 'medium',
+    coordinates: { lat: 0, lng: 0 },
+  });
+  
+  const { toast } = useToast();
+  const {
+    riskZones,
+    loading,
+    error,
+    addRiskZone,
+    editRiskZone,
+    removeRiskZone
+  } = useRiskZones();
 
   // Trafficking hotspot regions with SEO-friendly descriptions
-  const hotspots = [
+  const hotspots: Hotspot[] = [
     { 
       id: "india", 
       name: "India", 
@@ -61,7 +97,7 @@ export function MapTab() {
     if (!mapContainer.current) return;
 
     // Initialize map with a placeholder token - in production, this should come from environment variables
-    mapboxgl.accessToken = 'pk.placeholder';
+    mapboxgl.accessToken = process.env.MAPBOX_ACCESS_TOKEN || 'pk.placeholder';
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -109,6 +145,11 @@ export function MapTab() {
           setSelectedRegion(hotspot.id);
         });
       });
+      
+      // Add risk zone markers from database
+      if (riskZones.length > 0) {
+        renderRiskZoneMarkers();
+      }
     });
 
     // Cleanup
@@ -116,6 +157,141 @@ export function MapTab() {
       map.current?.remove();
     };
   }, []);
+  
+  // Re-render markers when risk zones change
+  useEffect(() => {
+    if (map.current && map.current.loaded()) {
+      renderRiskZoneMarkers();
+    }
+  }, [riskZones]);
+  
+  const renderRiskZoneMarkers = () => {
+    // Remove existing markers
+    const existingMarkers = document.querySelectorAll('.custom-risk-marker');
+    existingMarkers.forEach(marker => marker.remove());
+    
+    // Add markers for each risk zone
+    riskZones.forEach(zone => {
+      if (zone.coordinates && map.current) {
+        const markerEl = document.createElement('div');
+        markerEl.className = `custom-risk-marker ${zone.risk_level}-risk`;
+        markerEl.style.backgroundColor = getRiskLevelColor(zone.risk_level);
+        markerEl.style.width = '24px';
+        markerEl.style.height = '24px';
+        markerEl.style.borderRadius = '50%';
+        markerEl.style.border = '3px solid white';
+        markerEl.style.cursor = 'pointer';
+        markerEl.title = zone.location;
+        
+        // Create a popup for each marker
+        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
+          `<strong>${zone.location}</strong>
+           <p>${zone.description}</p>
+           <p>Risk Level: ${zone.risk_level}</p>`
+        );
+
+        // Create and add the marker
+        new mapboxgl.Marker(markerEl)
+          .setLngLat([zone.coordinates.lng, zone.coordinates.lat])
+          .setPopup(popup)
+          .addTo(map.current);
+
+        markerEl.addEventListener('click', () => {
+          setSelectedZone(zone);
+        });
+      }
+    });
+  };
+  
+  const getRiskLevelColor = (level: string): string => {
+    switch (level) {
+      case 'critical': return '#dc2626'; // red-600
+      case 'high': return '#ef4444'; // red-500
+      case 'medium': return '#f59e0b'; // amber-500
+      case 'low': return '#10b981'; // emerald-500
+      default: return '#6b7280'; // gray-500
+    }
+  };
+  
+  const handleAddRiskZone = async () => {
+    if (!formData.location || !formData.description) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill out all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const newZone = {
+      location: formData.location,
+      description: formData.description,
+      risk_level: formData.risk_level,
+      coordinates: formData.coordinates,
+      status: 'active',
+      user_id: 'placeholder-user-id', // Replace with actual user ID from auth context
+    };
+    
+    const result = await addRiskZone(newZone);
+    if (result) {
+      setFormData({
+        location: '',
+        description: '',
+        risk_level: 'medium',
+        coordinates: { lat: 0, lng: 0 },
+      });
+      setIsAddDialogOpen(false);
+    }
+  };
+  
+  const handleEditRiskZone = async () => {
+    if (!selectedZone || !formData.location || !formData.description) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill out all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const updates = {
+      location: formData.location,
+      description: formData.description,
+      risk_level: formData.risk_level,
+      coordinates: formData.coordinates,
+    };
+    
+    const success = await editRiskZone(selectedZone.id, updates);
+    if (success) {
+      setIsEditDialogOpen(false);
+    }
+  };
+  
+  const handleDeleteRiskZone = async () => {
+    if (!selectedZone) return;
+    
+    const success = await removeRiskZone(selectedZone.id);
+    if (success) {
+      setSelectedZone(null);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+  
+  const openEditDialog = (zone: RiskZone) => {
+    setSelectedZone(zone);
+    setFormData({
+      location: zone.location,
+      description: zone.description || '',
+      risk_level: zone.risk_level,
+      coordinates: zone.coordinates,
+    });
+    setIsEditDialogOpen(true);
+  };
+  
+  const openDeleteDialog = (zone: RiskZone) => {
+    setSelectedZone(zone);
+    setIsDeleteDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -139,6 +315,102 @@ export function MapTab() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 flex justify-between items-center">
+            <div className="text-sm text-muted-foreground">
+              {loading ? (
+                <span className="flex items-center"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading risk zones...</span>
+              ) : (
+                <span>{riskZones.length} custom risk zones defined</span>
+              )}
+            </div>
+            
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="mr-2 h-4 w-4" /> Add Risk Zone
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Risk Zone</DialogTitle>
+                  <DialogDescription>
+                    Create a new risk zone with location details.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="location" className="text-right">Location</Label>
+                    <Input 
+                      id="location" 
+                      className="col-span-3" 
+                      value={formData.location}
+                      onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="description" className="text-right">Description</Label>
+                    <Textarea 
+                      id="description" 
+                      className="col-span-3" 
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="risk-level" className="text-right">Risk Level</Label>
+                    <Select 
+                      value={formData.risk_level}
+                      onValueChange={(value) => setFormData({...formData, risk_level: value})}
+                    >
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select risk level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="critical">Critical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="latitude" className="text-right">Latitude</Label>
+                    <Input 
+                      id="latitude" 
+                      className="col-span-3" 
+                      type="number"
+                      value={formData.coordinates.lat}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        coordinates: {...formData.coordinates, lat: parseFloat(e.target.value)}
+                      })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="longitude" className="text-right">Longitude</Label>
+                    <Input 
+                      id="longitude" 
+                      className="col-span-3"
+                      type="number"
+                      value={formData.coordinates.lng}
+                      onChange={(e) => setFormData({
+                        ...formData, 
+                        coordinates: {...formData.coordinates, lng: parseFloat(e.target.value)}
+                      })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                  <Button onClick={handleAddRiskZone} disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Add Zone
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          
           <div className="relative w-full h-[600px] rounded-lg overflow-hidden">
             <div ref={mapContainer} className="absolute inset-0" />
           </div>
@@ -170,6 +442,49 @@ export function MapTab() {
             </div>
           )}
           
+          {/* Selected custom zone information */}
+          {selectedZone && (
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold mb-2">
+                  {selectedZone.location}
+                </h3>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => openEditDialog(selectedZone)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" /> Edit
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={() => openDeleteDialog(selectedZone)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                {selectedZone.description}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Badge 
+                  variant="outline" 
+                  className={`${selectedZone.risk_level === 'high' || selectedZone.risk_level === 'critical' ? 'bg-red-500/20' : 'bg-amber-500/20'}`}
+                >
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  {selectedZone.risk_level.charAt(0).toUpperCase() + selectedZone.risk_level.slice(1)} Risk Level
+                </Badge>
+                <Badge variant="outline" className="bg-guardian-light/30">
+                  <Info className="h-3 w-3 mr-1" />
+                  Lat: {selectedZone.coordinates.lat.toFixed(4)}, Lng: {selectedZone.coordinates.lng.toFixed(4)}
+                </Badge>
+              </div>
+            </div>
+          )}
+          
           <div className="mt-4 text-xs text-muted-foreground">
             <p>
               Guardian One's global monitoring system tracks trafficking incidents across key regions 
@@ -179,6 +494,107 @@ export function MapTab() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Risk Zone</DialogTitle>
+            <DialogDescription>
+              Update the details of this risk zone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-location" className="text-right">Location</Label>
+              <Input 
+                id="edit-location" 
+                className="col-span-3" 
+                value={formData.location}
+                onChange={(e) => setFormData({...formData, location: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-description" className="text-right">Description</Label>
+              <Textarea 
+                id="edit-description" 
+                className="col-span-3" 
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-risk-level" className="text-right">Risk Level</Label>
+              <Select 
+                value={formData.risk_level}
+                onValueChange={(value) => setFormData({...formData, risk_level: value})}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select risk level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-latitude" className="text-right">Latitude</Label>
+              <Input 
+                id="edit-latitude" 
+                className="col-span-3" 
+                type="number"
+                value={formData.coordinates.lat}
+                onChange={(e) => setFormData({
+                  ...formData, 
+                  coordinates: {...formData.coordinates, lat: parseFloat(e.target.value)}
+                })}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-longitude" className="text-right">Longitude</Label>
+              <Input 
+                id="edit-longitude" 
+                className="col-span-3"
+                type="number"
+                value={formData.coordinates.lng}
+                onChange={(e) => setFormData({
+                  ...formData, 
+                  coordinates: {...formData.coordinates, lng: parseFloat(e.target.value)}
+                })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditRiskZone} disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this risk zone? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteRiskZone} disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

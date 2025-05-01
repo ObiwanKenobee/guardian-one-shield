@@ -10,25 +10,158 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShieldIcon } from "@/components/ui/ShieldIcon";
-import { Shield, UserRound, Eye, EyeOff, Upload, MapPin } from "lucide-react";
+import { Shield, UserRound, Eye, EyeOff, Upload, MapPin, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 const Report = () => {
   const [reportType, setReportType] = useState("standard");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportData, setReportData] = useState({
+    title: "",
+    description: "",
+    location: "",
+    incidentType: "",
+    evidence: null as File | null,
+    contactInfo: {
+      name: "",
+      email: "",
+      phone: ""
+    }
+  });
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // In a real app, we would send this data to an API
-    setFormSubmitted(true);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     
-    toast({
-      title: "Report submitted successfully",
-      description: "Your report has been received and will be processed immediately.",
-      variant: "default",
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setReportData({
+        ...reportData,
+        [parent]: {
+          ...reportData[parent as keyof typeof reportData],
+          [child]: value
+        }
+      });
+    } else {
+      setReportData({
+        ...reportData,
+        [name]: value
+      });
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setReportData({
+        ...reportData,
+        evidence: e.target.files[0]
+      });
+    }
+  };
+
+  const handleIncidentTypeChange = (value: string) => {
+    setReportData({
+      ...reportData,
+      incidentType: value
     });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Create the report data object
+      const report = {
+        title: reportData.title,
+        description: reportData.description,
+        location: reportData.location,
+        report_type: reportType,
+        user_id: "placeholder-user-id", // Replace with actual user ID when auth is implemented
+        content: {
+          incident_type: reportData.incidentType,
+          is_anonymous: isAnonymous,
+          contact_info: isAnonymous ? null : reportData.contactInfo
+        },
+        status: "submitted"
+      };
+      
+      // Insert data into Supabase
+      const { data, error } = await supabase
+        .from('cases')
+        .insert([{
+          title: reportData.title,
+          description: reportData.description,
+          location: reportData.location,
+          category: reportData.incidentType,
+          status: 'pending'
+        }])
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Upload evidence file if present
+      if (reportData.evidence) {
+        const fileExt = reportData.evidence.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+        const filePath = `report-evidence/${fileName}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('uploads')
+          .upload(filePath, reportData.evidence);
+          
+        if (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          toast({
+            title: "Warning",
+            description: "Report submitted, but evidence upload failed.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Success message
+      toast({
+        title: "Report submitted successfully",
+        description: "Your report has been received and will be processed immediately.",
+        variant: "default",
+      });
+      
+      setFormSubmitted(true);
+    } catch (error: any) {
+      console.error('Error submitting report:', error);
+      toast({
+        title: "Error submitting report",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setFormSubmitted(false);
+    setReportData({
+      title: "",
+      description: "",
+      location: "",
+      incidentType: "",
+      evidence: null,
+      contactInfo: {
+        name: "",
+        email: "",
+        phone: ""
+      }
+    });
+    setIsAnonymous(false);
+    setReportType("standard");
   };
 
   return (
@@ -51,7 +184,7 @@ const Report = () => {
                 <p>A confirmation and reference number have been sent to the contact information you provided (if applicable).</p>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button variant="outline" onClick={() => setFormSubmitted(false)}>Submit Another Report</Button>
+                <Button variant="outline" onClick={handleReset}>Submit Another Report</Button>
                 <Button className="bg-guardian-primary hover:bg-guardian-dark">View Report Status</Button>
               </CardFooter>
             </Card>
@@ -107,29 +240,77 @@ const Report = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label htmlFor="name">Your Name</Label>
-                            <Input id="name" placeholder="Enter your name" />
+                            <Input 
+                              id="name" 
+                              name="contactInfo.name"
+                              value={reportData.contactInfo.name}
+                              onChange={handleChange}
+                              placeholder="Enter your name" 
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="email">Email Address</Label>
-                            <Input id="email" type="email" placeholder="Enter your email" />
+                            <Input 
+                              id="email" 
+                              name="contactInfo.email"
+                              value={reportData.contactInfo.email}
+                              onChange={handleChange}
+                              type="email" 
+                              placeholder="Enter your email" 
+                            />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="phone">Phone Number (Optional)</Label>
-                          <Input id="phone" placeholder="Enter your phone number" />
+                          <Input 
+                            id="phone" 
+                            name="contactInfo.phone"
+                            value={reportData.contactInfo.phone}
+                            onChange={handleChange}
+                            placeholder="Enter your phone number" 
+                          />
                         </div>
                       </div>
                     )}
 
                     <div className="space-y-2">
+                      <Label htmlFor="title">Report Title</Label>
+                      <Input 
+                        id="title" 
+                        name="title"
+                        value={reportData.title}
+                        onChange={handleChange}
+                        placeholder="Enter a title for your report" 
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
                       <Label htmlFor="location">Incident Location</Label>
                       <div className="relative">
-                        <Input id="location" placeholder="Enter location or use current location" />
+                        <Input 
+                          id="location" 
+                          name="location"
+                          value={reportData.location}
+                          onChange={handleChange}
+                          placeholder="Enter location or use current location" 
+                        />
                         <Button 
                           type="button" 
                           variant="ghost" 
                           size="icon" 
                           className="absolute right-0 top-0 h-full"
+                          onClick={() => {
+                            if (navigator.geolocation) {
+                              navigator.geolocation.getCurrentPosition((position) => {
+                                const { latitude, longitude } = position.coords;
+                                setReportData({
+                                  ...reportData,
+                                  location: `${latitude}, ${longitude}`
+                                });
+                              });
+                            }
+                          }}
                         >
                           <MapPin className="h-4 w-4" />
                         </Button>
@@ -138,7 +319,10 @@ const Report = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="incident-type">Incident Type</Label>
-                      <Select>
+                      <Select 
+                        value={reportData.incidentType} 
+                        onValueChange={handleIncidentTypeChange}
+                      >
                         <SelectTrigger id="incident-type">
                           <SelectValue placeholder="Select incident type" />
                         </SelectTrigger>
@@ -156,8 +340,12 @@ const Report = () => {
                       <Label htmlFor="description">Description</Label>
                       <Textarea 
                         id="description" 
+                        name="description"
+                        value={reportData.description}
+                        onChange={handleChange}
                         placeholder="Provide as much detail as possible about what you observed"
                         className="min-h-32"
+                        required
                       />
                     </div>
 
@@ -171,10 +359,23 @@ const Report = () => {
                         <p className="text-xs text-muted-foreground">
                           Supports images, video, and audio files
                         </p>
-                        <Input id="evidence" type="file" className="hidden" multiple />
-                        <Button type="button" variant="outline" size="sm" className="mt-4">
+                        <Input 
+                          id="evidence" 
+                          type="file" 
+                          className="hidden" 
+                          onChange={handleFileChange}
+                          multiple 
+                        />
+                        <Button type="button" variant="outline" size="sm" className="mt-4"
+                          onClick={() => document.getElementById('evidence')?.click()}
+                        >
                           Select Files
                         </Button>
+                        {reportData.evidence && (
+                          <p className="text-sm text-muted-foreground mt-2">
+                            Selected: {reportData.evidence.name}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -203,10 +404,19 @@ const Report = () => {
                       <Button 
                         type="submit" 
                         className="bg-guardian-primary hover:bg-guardian-dark"
-                        disabled={reportType === "anonymous" && !isAnonymous}
+                        disabled={reportType === "anonymous" && !isAnonymous || isSubmitting}
                       >
-                        <Shield className="mr-2 h-4 w-4" />
-                        Submit Report
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="mr-2 h-4 w-4" />
+                            Submit Report
+                          </>
+                        )}
                       </Button>
                     </div>
                   </form>
