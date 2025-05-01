@@ -156,6 +156,51 @@ export type Database = {
         }
         Relationships: []
       }
+      cases: {
+        Row: {
+          assigned_to: string | null
+          category: string | null
+          created_at: string | null
+          description: string | null
+          evidence_links: string[] | null
+          id: string
+          incident_date: string | null
+          location: string | null
+          reporter_id: string | null
+          status: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          evidence_links?: string[] | null
+          id?: string
+          incident_date?: string | null
+          location?: string | null
+          reporter_id?: string | null
+          status?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          evidence_links?: string[] | null
+          id?: string
+          incident_date?: string | null
+          location?: string | null
+          reporter_id?: string | null
+          status?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       collaboration_metrics: {
         Row: {
           contract_status: string
@@ -435,12 +480,13 @@ export type Database = {
       esg_initiatives: {
         Row: {
           budget: number | null
+          category: string | null
           created_at: string
           description: string | null
           end_date: string | null
           id: string
           impact_score: number | null
-          start_date: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["initiative_status"]
           title: string
           updated_at: string
@@ -448,12 +494,13 @@ export type Database = {
         }
         Insert: {
           budget?: number | null
+          category?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
           id?: string
           impact_score?: number | null
-          start_date?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["initiative_status"]
           title: string
           updated_at?: string
@@ -461,12 +508,13 @@ export type Database = {
         }
         Update: {
           budget?: number | null
+          category?: string | null
           created_at?: string
           description?: string | null
           end_date?: string | null
           id?: string
           impact_score?: number | null
-          start_date?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["initiative_status"]
           title?: string
           updated_at?: string
@@ -862,6 +910,7 @@ export type Database = {
       }
       partners: {
         Row: {
+          compliance_score: number | null
           contact_email: string | null
           created_at: string
           description: string | null
@@ -876,6 +925,7 @@ export type Database = {
           website_url: string | null
         }
         Insert: {
+          compliance_score?: number | null
           contact_email?: string | null
           created_at?: string
           description?: string | null
@@ -890,6 +940,7 @@ export type Database = {
           website_url?: string | null
         }
         Update: {
+          compliance_score?: number | null
           contact_email?: string | null
           created_at?: string
           description?: string | null
@@ -1433,43 +1484,55 @@ export type Database = {
       }
       supplier_assessments: {
         Row: {
+          assessment_type: string | null
           certification_details: Json | null
           compliance_score: number | null
           contact_information: Json | null
           created_at: string | null
+          due_date: string | null
           id: string
           last_audit_date: string | null
           next_audit_date: string | null
           risk_areas: string[] | null
+          score: number | null
           status: Database["public"]["Enums"]["supplier_status"] | null
+          supplier_id: string | null
           supplier_name: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          assessment_type?: string | null
           certification_details?: Json | null
           compliance_score?: number | null
           contact_information?: Json | null
           created_at?: string | null
+          due_date?: string | null
           id?: string
           last_audit_date?: string | null
           next_audit_date?: string | null
           risk_areas?: string[] | null
+          score?: number | null
           status?: Database["public"]["Enums"]["supplier_status"] | null
+          supplier_id?: string | null
           supplier_name: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          assessment_type?: string | null
           certification_details?: Json | null
           compliance_score?: number | null
           contact_information?: Json | null
           created_at?: string | null
+          due_date?: string | null
           id?: string
           last_audit_date?: string | null
           next_audit_date?: string | null
           risk_areas?: string[] | null
+          score?: number | null
           status?: Database["public"]["Enums"]["supplier_status"] | null
+          supplier_id?: string | null
           supplier_name?: string
           updated_at?: string | null
           user_id?: string
@@ -2081,14 +2144,14 @@ export type Database = {
       }
       _st_coveredby: {
         Args:
-          | { geom1: unknown; geom2: unknown }
           | { geog1: unknown; geog2: unknown }
+          | { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       _st_covers: {
         Args:
-          | { geom1: unknown; geom2: unknown }
           | { geog1: unknown; geog2: unknown }
+          | { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       _st_crosses: {
@@ -2164,20 +2227,20 @@ export type Database = {
       addgeometrycolumn: {
         Args:
           | {
-              schema_name: string
-              table_name: string
-              column_name: string
-              new_srid: number
-              new_type: string
-              new_dim: number
-              use_typmod?: boolean
-            }
-          | {
               catalog_name: string
               schema_name: string
               table_name: string
               column_name: string
               new_srid_in: number
+              new_type: string
+              new_dim: number
+              use_typmod?: boolean
+            }
+          | {
+              schema_name: string
+              table_name: string
+              column_name: string
+              new_srid: number
               new_type: string
               new_dim: number
               use_typmod?: boolean
@@ -2261,15 +2324,15 @@ export type Database = {
               table_name: string
               column_name: string
             }
-          | { table_name: string; column_name: string }
           | { schema_name: string; table_name: string; column_name: string }
+          | { table_name: string; column_name: string }
         Returns: string
       }
       dropgeometrytable: {
         Args:
-          | { table_name: string }
-          | { schema_name: string; table_name: string }
           | { catalog_name: string; schema_name: string; table_name: string }
+          | { schema_name: string; table_name: string }
+          | { table_name: string }
         Returns: string
       }
       enablelongtransactions: {
@@ -2318,13 +2381,13 @@ export type Database = {
       }
       geometry: {
         Args:
-          | { "": unknown }
-          | { "": unknown }
+          | { "": string }
           | { "": string }
           | { "": unknown }
           | { "": unknown }
           | { "": unknown }
-          | { "": string }
+          | { "": unknown }
+          | { "": unknown }
           | { "": unknown }
         Returns: unknown
       }
@@ -2790,8 +2853,8 @@ export type Database = {
       st_area: {
         Args:
           | { "": string }
-          | { geog: unknown; use_spheroid?: boolean }
           | { "": unknown }
+          | { geog: unknown; use_spheroid?: boolean }
         Returns: number
       }
       st_area2d: {
@@ -2811,7 +2874,7 @@ export type Database = {
         Returns: string
       }
       st_asewkt: {
-        Args: { "": unknown } | { "": string } | { "": unknown }
+        Args: { "": string } | { "": unknown } | { "": unknown }
         Returns: string
       }
       st_asgeojson: {
@@ -2830,7 +2893,6 @@ export type Database = {
       st_asgml: {
         Args:
           | { "": string }
-          | { geom: unknown; maxdecimaldigits?: number; options?: number }
           | {
               geog: unknown
               maxdecimaldigits?: number
@@ -2838,6 +2900,7 @@ export type Database = {
               nprefix?: string
               id?: string
             }
+          | { geom: unknown; maxdecimaldigits?: number; options?: number }
           | {
               version: number
               geog: unknown
@@ -2862,9 +2925,9 @@ export type Database = {
       }
       st_askml: {
         Args:
-          | { geom: unknown; maxdecimaldigits?: number; nprefix?: string }
-          | { geog: unknown; maxdecimaldigits?: number; nprefix?: string }
           | { "": string }
+          | { geog: unknown; maxdecimaldigits?: number; nprefix?: string }
+          | { geom: unknown; maxdecimaldigits?: number; nprefix?: string }
         Returns: string
       }
       st_aslatlontext: {
@@ -2887,8 +2950,8 @@ export type Database = {
       }
       st_assvg: {
         Args:
-          | { geog: unknown; rel?: number; maxdecimaldigits?: number }
           | { "": string }
+          | { geog: unknown; rel?: number; maxdecimaldigits?: number }
           | { geom: unknown; rel?: number; maxdecimaldigits?: number }
         Returns: string
       }
@@ -2899,7 +2962,8 @@ export type Database = {
       st_astwkb: {
         Args:
           | {
-              geom: unknown
+              geom: unknown[]
+              ids: number[]
               prec?: number
               prec_z?: number
               prec_m?: number
@@ -2907,8 +2971,7 @@ export type Database = {
               with_boxes?: boolean
             }
           | {
-              geom: unknown[]
-              ids: number[]
+              geom: unknown
               prec?: number
               prec_z?: number
               prec_m?: number
@@ -2946,7 +3009,7 @@ export type Database = {
         Returns: unknown
       }
       st_centroid: {
-        Args: { "": unknown } | { "": string }
+        Args: { "": string } | { "": unknown }
         Returns: unknown
       }
       st_cleangeometry: {
@@ -3009,8 +3072,8 @@ export type Database = {
       }
       st_covers: {
         Args:
-          | { geom1: unknown; geom2: unknown }
           | { geog1: unknown; geog2: unknown }
+          | { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_crosses: {
@@ -3039,8 +3102,8 @@ export type Database = {
       }
       st_distance: {
         Args:
-          | { geom1: unknown; geom2: unknown }
           | { geog1: unknown; geog2: unknown; use_spheroid?: boolean }
+          | { geom1: unknown; geom2: unknown }
         Returns: number
       }
       st_distancesphere: {
@@ -3151,8 +3214,8 @@ export type Database = {
       }
       st_generatepoints: {
         Args:
-          | { area: unknown; npoints: number; seed: number }
           | { area: unknown; npoints: number }
+          | { area: unknown; npoints: number; seed: number }
         Returns: unknown
       }
       st_geogfromtext: {
@@ -3207,7 +3270,7 @@ export type Database = {
         Returns: unknown
       }
       st_geomfromgeojson: {
-        Args: { "": string } | { "": Json } | { "": Json }
+        Args: { "": Json } | { "": Json } | { "": string }
         Returns: unknown
       }
       st_geomfromgml: {
@@ -3264,8 +3327,8 @@ export type Database = {
       }
       st_intersects: {
         Args:
-          | { geom1: unknown; geom2: unknown }
           | { geog1: unknown; geog2: unknown }
+          | { geom1: unknown; geom2: unknown }
         Returns: boolean
       }
       st_isclosed: {
@@ -3314,8 +3377,8 @@ export type Database = {
       }
       st_length: {
         Args:
-          | { "": unknown }
           | { "": string }
+          | { "": unknown }
           | { geog: unknown; use_spheroid?: boolean }
         Returns: number
       }
@@ -3401,7 +3464,7 @@ export type Database = {
         Returns: unknown
       }
       st_makevalid: {
-        Args: { geom: unknown; params: string } | { "": unknown }
+        Args: { "": unknown } | { geom: unknown; params: string }
         Returns: unknown
       }
       st_maxdistance: {
@@ -3647,7 +3710,7 @@ export type Database = {
         Returns: unknown
       }
       st_setsrid: {
-        Args: { geom: unknown; srid: number } | { geog: unknown; srid: number }
+        Args: { geog: unknown; srid: number } | { geom: unknown; srid: number }
         Returns: unknown
       }
       st_sharedpaths: {
@@ -3679,7 +3742,7 @@ export type Database = {
         Returns: Record<string, unknown>[]
       }
       st_srid: {
-        Args: { geom: unknown } | { geog: unknown }
+        Args: { geog: unknown } | { geom: unknown }
         Returns: number
       }
       st_startpoint: {
@@ -3733,9 +3796,9 @@ export type Database = {
       }
       st_union: {
         Args:
+          | { "": unknown[] }
           | { geom1: unknown; geom2: unknown }
           | { geom1: unknown; geom2: unknown; gridsize: number }
-          | { "": unknown[] }
         Returns: unknown
       }
       st_voronoilines: {

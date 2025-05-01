@@ -1,0 +1,54 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://guardian-one.org/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en-in" href="https://guardian-one.org/in" />
+    <xhtml:link rel="alternate" hreflang="en-ke" href="https://guardian-one.org/ke" />
+    <xhtml:link rel="alternate" hreflang="en-ng" href="https://guardian-one.org/ng" />
+    <xhtml:link rel="alternate" hreflang="th" href="https://guardian-one.org/th" />
+    <xhtml:link rel="alternate" hreflang="en-ph" href="https://guardian-one.org/ph" />
+    <xhtml:link rel="alternate" hreflang="pt-br" href="https://guardian-one.org/br" />
+  </url>
+  <url>
+    <loc>https://guardian-one.org/dashboard</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://guardian-one.org/report</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://guardian-one.org/alerts</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://guardian-one.org/about</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://guardian-one.org/blog/ai-transforming-fight-against-child-trafficking</loc>
+    <lastmod>2025-04-01</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://guardian-one.org/blog/blockchain-for-child-identity</loc>
+    <lastmod>2025-04-05</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://guardian-one.org/blog/how-to-report-suspected-trafficking</loc>
+    <lastmod>2025-04-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
