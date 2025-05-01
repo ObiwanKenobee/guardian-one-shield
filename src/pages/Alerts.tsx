@@ -126,7 +126,7 @@ const Alerts = () => {
       return (
         alert.title.toLowerCase().includes(query) ||
         alert.description.toLowerCase().includes(query) ||
-        (typeof alert.location === 'string' && alert.location.toLowerCase().includes(query))
+        (alert.location && typeof alert.location === 'string' && alert.location.toLowerCase().includes(query))
       );
     }
     

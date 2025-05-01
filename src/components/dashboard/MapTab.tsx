@@ -359,7 +359,7 @@ export function MapTab() {
                     <Label htmlFor="risk-level" className="text-right">Risk Level</Label>
                     <Select 
                       value={formData.risk_level}
-                      onValueChange={(value) => setFormData({...formData, risk_level: value})}
+                      onValueChange={(value: 'low' | 'medium' | 'high' | 'critical') => setFormData({...formData, risk_level: value})}
                     >
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select risk level" />
@@ -526,7 +526,7 @@ export function MapTab() {
               <Label htmlFor="edit-risk-level" className="text-right">Risk Level</Label>
               <Select 
                 value={formData.risk_level}
-                onValueChange={(value) => setFormData({...formData, risk_level: value})}
+                onValueChange={(value: 'low' | 'medium' | 'high' | 'critical') => setFormData({...formData, risk_level: value})}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select risk level" />
