@@ -16,42 +16,42 @@ export function MapTab() {
     { 
       id: "india", 
       name: "India", 
-      coordinates: [78.9629, 20.5937],
+      coordinates: [78.9629, 20.5937] as [number, number],
       description: "Child trafficking prevention initiatives in India focus on biometric identification and community reporting networks.",
       level: "high"
     },
     { 
       id: "kenya", 
       name: "Kenya", 
-      coordinates: [37.9062, 0.0236],
+      coordinates: [37.9062, 0.0236] as [number, number],
       description: "Child protection technology in Kenya utilizes mobile alerts and school-based monitoring systems.",
       level: "medium" 
     },
     { 
       id: "nigeria", 
       name: "Nigeria", 
-      coordinates: [8.6753, 9.0820],
+      coordinates: [8.6753, 9.0820] as [number, number],
       description: "Nigeria's child alert system connects rural communities with urban law enforcement to report missing children.",
       level: "high"
     },
     { 
       id: "thailand", 
       name: "Thailand", 
-      coordinates: [100.9925, 15.8700],
+      coordinates: [100.9925, 15.8700] as [number, number],
       description: "Dark web detection systems in Thailand monitor for child exploitation content and coordinate with local authorities.",
       level: "medium"
     },
     { 
       id: "philippines", 
       name: "Philippines", 
-      coordinates: [121.7740, 12.8797],
+      coordinates: [121.7740, 12.8797] as [number, number],
       description: "Philippines deploys AI-powered child rescue technologies in cooperation with international agencies.",
       level: "high"
     },
     { 
       id: "brazil", 
       name: "Brazil", 
-      coordinates: [-51.9253, -14.2350],
+      coordinates: [-51.9253, -14.2350] as [number, number],
       description: "Brazil's plataforma contra tráfico infantil uses community-based monitoring and anonymous reporting.",
       level: "medium"
     }
@@ -68,7 +68,7 @@ export function MapTab() {
       style: 'mapbox://styles/mapbox/dark-v11',
       projection: 'globe',
       zoom: 1.5,
-      center: [30, 15],
+      center: [30, 15] as [number, number],
       pitch: 45,
     });
 
