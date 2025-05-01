@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -126,7 +127,10 @@ const Alerts = () => {
       return (
         alert.title.toLowerCase().includes(query) ||
         alert.description.toLowerCase().includes(query) ||
-        (typeof alert.location === 'string' && alert.location.toLowerCase().includes(query))
+        // Fix the type issue with location by explicitly checking if it's a string and using a safe approach
+        (alert.location && typeof alert.location === 'string' ? 
+          alert.location.toLowerCase().includes(query) : 
+          false)
       );
     }
     
