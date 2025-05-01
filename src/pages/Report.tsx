@@ -42,7 +42,7 @@ const Report = () => {
       setReportData({
         ...reportData,
         [parent]: {
-          ...reportData[parent as keyof typeof reportData],
+          ...(reportData[parent as keyof typeof reportData] as Record<string, string>),
           [child]: value
         }
       });

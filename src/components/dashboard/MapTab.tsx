@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
@@ -33,7 +32,7 @@ export function MapTab() {
   const [formData, setFormData] = useState({
     location: '',
     description: '',
-    risk_level: 'medium',
+    risk_level: 'medium' as 'low' | 'medium' | 'high' | 'critical',
     coordinates: { lat: 0, lng: 0 },
   });
   
@@ -237,7 +236,7 @@ export function MapTab() {
       setFormData({
         location: '',
         description: '',
-        risk_level: 'medium',
+        risk_level: 'medium' as 'low' | 'medium' | 'high' | 'critical',
         coordinates: { lat: 0, lng: 0 },
       });
       setIsAddDialogOpen(false);

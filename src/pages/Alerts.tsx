@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,8 @@ import {
   ChevronRight, 
   ShieldAlert,
   Plus,
-  Loader2
+  Loader2,
+  Edit
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAlerts, Alert } from "@/hooks/useAlerts";

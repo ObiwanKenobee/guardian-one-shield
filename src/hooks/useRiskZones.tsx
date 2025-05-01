@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { fetchRiskZones, createRiskZone, updateRiskZone, deleteRiskZone } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
